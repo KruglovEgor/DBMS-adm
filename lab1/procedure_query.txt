@@ -1,12 +1,18 @@
-CREATE OR REPLACE FUNCTION get_column_info(inp_column_name TEXT)
-RETURNS TABLE (
-    no BIGINT,                       -- номер строки
-    column_name TEXT,             -- имя столбца
-    table_name TEXT,              -- имя таблицы
-    attributes TEXT               -- атрибуты столбца (тип, ограничения, индекс, комментарии)
-) LANGUAGE plpgsql AS $$
+CREATE OR REPLACE PROCEDURE get_column_info(inp_column_name TEXT)
+LANGUAGE plpgsql AS $$
+DECLARE
+    rec RECORD;  -- Объявляем переменную типа записи для цикла
 BEGIN
-    RETURN QUERY
+    -- Создаем временную таблицу для хранения результатов
+    CREATE TEMP TABLE IF NOT EXISTS temp_column_info (
+        no BIGINT,                       -- номер строки
+        column_name TEXT,                -- имя столбца
+        table_name TEXT,                 -- имя таблицы
+        attributes TEXT                  -- атрибуты столбца (тип, ограничения, индекс, комментарии)
+    );
+	
+	INSERT INTO temp_column_info (no, column_name, table_name, attributes)
+	
     WITH column_data AS (
         SELECT 
             a.attname::TEXT AS column_name,
@@ -65,7 +71,19 @@ BEGIN
         COALESCE('Index : ' || index_name || E'\n', '') AS attributes
     FROM column_data
     GROUP BY  column_data.column_name, column_data.table_name, column_type, column_comment, index_name;
+
+	-- Выводим результаты из временной таблицы
+    RAISE NOTICE 'Results:';
+    FOR rec IN SELECT * FROM temp_column_info LOOP
+        RAISE NOTICE '%', rec;
+    END LOOP;
+
+--     -- Если необходимо, можно удалить временную таблицу
+--     DROP TABLE IF EXISTS temp_column_info;
+
+
 END;
 $$;
 
-SELECT * FROM get_column_info('x');
+CALL get_column_info('user_id');
+SELECT * FROM temp_column_info;
