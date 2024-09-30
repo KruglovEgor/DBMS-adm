@@ -52,13 +52,20 @@ BEGIN
         -- Форматирование атрибутов (тип, ограничения, индексы, комментарии)
         'Type  : ' || column_data.column_type || E'\n' ||
         COALESCE(
-            'Constr: ' || column_data.constraint_type || E' ' || column_data.constraint_name || 
-            CASE WHEN column_data.constraint_type = 'FOREIGN KEY' THEN
-                ' REFERENCES ' || (SELECT relname FROM pg_class WHERE oid = column_data.confrelid) || 
-                '(' || (SELECT attname FROM pg_attribute WHERE attrelid = column_data.confrelid AND attnum = ANY(column_data.confkey)) || ')'
-            ELSE '' END || E'\n', '') ||
-        COALESCE('Commen: ' || column_data.column_comment || E'\n', '') ||
-        COALESCE('Index : ' || column_data.index_name || E'\n', '') AS attributes
-    FROM column_data;
+            STRING_AGG(
+                'Constr: ' || 
+                CASE constraint_type
+                    WHEN 'PRIMARY KEY' THEN 'PRIMARY KEY ' || constraint_name
+                    WHEN 'FOREIGN KEY' THEN 'FOREIGN KEY ' || constraint_name || 
+                        ' REFERENCES ' || (SELECT relname FROM pg_class WHERE oid = confrelid) || 
+                        '(' || (SELECT attname FROM pg_attribute WHERE attrelid = confrelid AND attnum = ANY(confkey)) || ')'
+                    ELSE constraint_type || ' ' || constraint_name
+                END, E'\n') || E'\n', '') ||
+        COALESCE('Commen: ' || column_comment || E'\n', '') ||
+        COALESCE('Index : ' || index_name || E'\n', '') AS attributes
+    FROM column_data
+    GROUP BY  column_data.column_name, column_data.table_name, column_type, column_comment, index_name;
 END;
 $$;
+
+SELECT * FROM get_column_info('x');
