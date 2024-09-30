@@ -15,7 +15,8 @@ BEGIN
 	INSERT INTO temp_column_info (no, column_name, table_name, attributes)
 	
     WITH column_data AS (
-        SELECT 
+        SELECT
+			a.attrelid AS table_id,
             a.attname::TEXT AS column_name,
             c.relname::TEXT AS table_name,
             t.typname AS data_type,
@@ -34,9 +35,9 @@ BEGIN
             ic.relname AS index_name          -- имя индекса, если столбец включен в индекс
         FROM 
             pg_attribute a
-        JOIN 
+        LEFT JOIN 
             pg_class c ON a.attrelid = c.oid     -- соединение по идентификатору таблицы
-        JOIN 
+        LEFT JOIN 
             pg_type t ON a.atttypid = t.oid      -- соединение по типу данных
         LEFT JOIN 
             pg_constraint con ON con.conrelid = c.oid  -- соединение с ограничениями на уровне таблицы
@@ -71,7 +72,7 @@ BEGIN
         COALESCE('Commen: ' || column_comment || E'\n', '') ||
         COALESCE('Index : ' || STRING_AGG(DISTINCT index_name, E', ') || E'\n', '') AS attributes
     FROM column_data
-    GROUP BY  column_data.column_name, column_data.table_name, column_type, column_comment;
+    GROUP BY  table_id, column_name, table_name, column_type, column_comment;
 
 	-- Выводим результаты из временной таблицы
     RAISE NOTICE 'Results:';
