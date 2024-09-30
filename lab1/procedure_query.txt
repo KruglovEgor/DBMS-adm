@@ -3,6 +3,7 @@ LANGUAGE plpgsql AS $$
 DECLARE
     rec RECORD;  -- Объявляем переменную типа записи для цикла
 BEGIN
+	DROP TABLE IF EXISTS temp_column_info;
     -- Создаем временную таблицу для хранения результатов
     CREATE TEMP TABLE IF NOT EXISTS temp_column_info (
         no BIGINT,                       -- номер строки
@@ -77,11 +78,6 @@ BEGIN
     FOR rec IN SELECT * FROM temp_column_info LOOP
         RAISE NOTICE '%', rec;
     END LOOP;
-
---     -- Если необходимо, можно удалить временную таблицу
---     DROP TABLE IF EXISTS temp_column_info;
-
-
 END;
 $$;
 
