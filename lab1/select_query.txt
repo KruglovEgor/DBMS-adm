@@ -1,0 +1,38 @@
+SELECT 
+	a.attname AS column_name, 
+	c.relname AS table_name,  
+	t.typname AS data_type,
+	con.conname AS constraint_name, 
+    CASE con.contype
+        WHEN 'p' THEN 'PRIMARY KEY'
+        WHEN 'u' THEN 'UNIQUE'
+        WHEN 'f' THEN 'FOREIGN KEY'
+        WHEN 'c' THEN 'CHECK'
+        WHEN 'n' THEN 'NOT NULL'
+	END AS constraint_type,
+	con.confrelid,
+	con.confkey,
+	ic.relname AS index_name,
+	d.description AS commen
+FROM 
+	pg_attribute a
+LEFT JOIN 
+	pg_class c ON a.attrelid = c.oid
+LEFT JOIN
+	pg_type t ON a.atttypid = t.oid
+LEFT JOIN
+	pg_constraint con ON con.conrelid = c.oid
+	AND
+	a.attnum = ANY(con.conkey)
+LEFT JOIN
+	pg_index i ON c.oid = i.indrelid 
+LEFT JOIN
+	pg_class ic ON i.indexrelid = ic.oid
+	AND
+	a.attnum = ANY(i.indkey)
+LEFT JOIN
+	pg_description d ON a.attnum = d.objsubid AND d.objoid = c.oid
+WHERE 
+	a.attname='x'
+	AND
+	c.relkind = 'r';
