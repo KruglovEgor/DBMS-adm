@@ -53,7 +53,7 @@ BEGIN
         'Type  : ' || column_data.column_type || E'\n' ||
         COALESCE(
             STRING_AGG(
-                'Constr: ' || 
+                DISTINCT 'Constr: ' || 
                 CASE constraint_type
                     WHEN 'PRIMARY KEY' THEN 'PRIMARY KEY ' || constraint_name
                     WHEN 'FOREIGN KEY' THEN 'FOREIGN KEY ' || constraint_name || 
@@ -62,9 +62,9 @@ BEGIN
                     ELSE constraint_type || ' ' || constraint_name
                 END, E'\n') || E'\n', '') ||
         COALESCE('Commen: ' || column_comment || E'\n', '') ||
-        COALESCE('Index : ' || index_name || E'\n', '') AS attributes
+        COALESCE('Index : ' || STRING_AGG(DISTINCT index_name, E', ') || E'\n', '') AS attributes
     FROM column_data
-    GROUP BY  column_data.column_name, column_data.table_name, column_type, column_comment, index_name;
+    GROUP BY  column_data.column_name, column_data.table_name, column_type, column_comment;
 END;
 $$;
 
