@@ -17,6 +17,7 @@ BEGIN
     WITH column_data AS (
         SELECT
 			a.attrelid AS table_id,
+			a.attnum AS num_in_table,
             a.attname::TEXT AS column_name,
             c.relname::TEXT AS table_name,
             t.typname AS data_type,
@@ -58,7 +59,7 @@ BEGIN
         column_data.column_name,                 -- имя столбца
         column_data.table_name,                  -- имя таблицы
         -- Форматирование атрибутов (тип, ограничения, индексы, комментарии)
-        'Type  : ' || column_data.column_type || E'\n' ||
+        'Type  : ' || STRING_AGG( DISTINCT column_data.column_type, E', ') || E'\n' ||
         COALESCE(
             STRING_AGG(
                 DISTINCT 'Constr: ' || 
@@ -69,18 +70,13 @@ BEGIN
                         '(' || (SELECT attname FROM pg_attribute WHERE attrelid = confrelid AND attnum = ANY(confkey)) || ')'
                     ELSE constraint_type || ' ' || constraint_name
                 END, E'\n') || E'\n', '') ||
-        COALESCE('Commen: ' || column_comment || E'\n', '') ||
+        COALESCE('Commen: ' || STRING_AGG(DISTINCT column_comment, E', ') || E'\n', '') ||
         COALESCE('Index : ' || STRING_AGG(DISTINCT index_name, E', ') || E'\n', '') AS attributes
     FROM column_data
-    GROUP BY  table_id, column_name, table_name, column_type, column_comment;
+    GROUP BY  table_id, num_in_table, column_name, table_name;
 
-	-- Выводим результаты из временной таблицы
-    RAISE NOTICE 'Results:';
-    FOR rec IN SELECT * FROM temp_column_info LOOP
-        RAISE NOTICE '%', rec;
-    END LOOP;
-END;
-$$;
+
+-- можно группировать только по column_name и table_name. Но выходит странно
 
 CALL get_column_info('user_id');
 SELECT * FROM temp_column_info;
