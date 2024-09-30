@@ -1,0 +1,76 @@
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,            -- Уникальный идентификатор пользователя
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON COLUMN users.user_id IS 'Уникальный идентификатор пользователя';
+COMMENT ON COLUMN users.username IS 'Имя пользователя';
+COMMENT ON COLUMN users.email IS 'Электронная почта пользователя';
+COMMENT ON COLUMN users.created_at IS 'Дата и время создания пользователя';
+
+
+CREATE TABLE posts (
+    post_id SERIAL PRIMARY KEY,             -- Уникальный идентификатор поста
+    user_id INT REFERENCES users(user_id),
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON COLUMN posts.post_id IS 'Уникальный идентификатор поста';
+COMMENT ON COLUMN posts.user_id IS 'Идентификатор пользователя, создавшего пост';
+COMMENT ON COLUMN posts.title IS 'Заголовок поста';
+COMMENT ON COLUMN posts.content IS 'Содержимое поста';
+COMMENT ON COLUMN posts.created_at IS 'Дата и время создания поста';
+COMMENT ON COLUMN posts.updated_at IS 'Дата и время последнего обновления поста';
+
+
+CREATE TABLE comments (
+    comment_id SERIAL PRIMARY KEY,           -- Уникальный идентификатор комментария
+    post_id INT REFERENCES posts(post_id),
+    user_id INT REFERENCES users(user_id),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON COLUMN comments.comment_id IS 'Уникальный идентификатор комментария';
+COMMENT ON COLUMN comments.post_id IS 'Идентификатор поста, к которому относится комментарий';
+COMMENT ON COLUMN comments.user_id IS 'Идентификатор пользователя, написавшего комментарий';
+COMMENT ON COLUMN comments.content IS 'Содержимое комментария';
+COMMENT ON COLUMN comments.created_at IS 'Дата и время создания комментария';
+COMMENT ON COLUMN comments.updated_at IS 'Дата и время последнего обновления комментария';
+
+CREATE TABLE likes (
+    like_id SERIAL PRIMARY KEY,              -- Уникальный идентификатор лайка
+    post_id INT REFERENCES posts(post_id),
+    user_id INT REFERENCES users(user_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON COLUMN likes.like_id IS 'Уникальный идентификатор лайка';
+COMMENT ON COLUMN likes.post_id IS 'Идентификатор поста, который был лайкнут';
+COMMENT ON COLUMN likes.user_id IS 'Идентификатор пользователя, поставившего лайк';
+COMMENT ON COLUMN likes.created_at IS 'Дата и время создания лайка';
+
+CREATE TABLE tags (
+    tag_id SERIAL PRIMARY KEY,                -- Уникальный идентификатор тега
+    tag_name VARCHAR(50) NOT NULL UNIQUE
+);
+
+COMMENT ON COLUMN tags.tag_id IS 'Уникальный идентификатор тега';
+COMMENT ON COLUMN tags.tag_name IS 'Название тега';
+
+CREATE TABLE post_tags (
+    post_id INT REFERENCES posts(post_id),
+    tag_id INT REFERENCES tags(tag_id),
+    PRIMARY KEY (post_id, tag_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON COLUMN post_tags.post_id IS 'Идентификатор поста';
+COMMENT ON COLUMN post_tags.tag_id IS 'Идентификатор тега';
+COMMENT ON COLUMN post_tags.created_at IS 'Дата и время связывания поста с тегом';
