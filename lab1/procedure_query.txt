@@ -1,0 +1,64 @@
+CREATE OR REPLACE FUNCTION get_column_info(inp_column_name TEXT)
+RETURNS TABLE (
+    no BIGINT,                       -- номер строки
+    column_name TEXT,             -- имя столбца
+    table_name TEXT,              -- имя таблицы
+    attributes TEXT               -- атрибуты столбца (тип, ограничения, индекс, комментарии)
+) LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY
+    WITH column_data AS (
+        SELECT 
+            a.attname::TEXT AS column_name,
+            c.relname::TEXT AS table_name,
+            t.typname AS data_type,
+            pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_type,
+            con.conname AS constraint_name,
+            CASE con.contype
+                WHEN 'p' THEN 'PRIMARY KEY'
+                WHEN 'u' THEN 'UNIQUE'
+                WHEN 'f' THEN 'FOREIGN KEY'
+                WHEN 'c' THEN 'CHECK'
+                WHEN 'n' THEN 'NOT NULL'
+            END AS constraint_type,
+            con.confrelid,   -- таблица, на которую ссылается внешний ключ (если есть)
+            con.confkey,     -- столбец, на который ссылается внешний ключ (если есть)
+            d.description AS column_comment,  -- комментарий к столбцу
+            ic.relname AS index_name          -- имя индекса, если столбец включен в индекс
+        FROM 
+            pg_attribute a
+        JOIN 
+            pg_class c ON a.attrelid = c.oid     -- соединение по идентификатору таблицы
+        JOIN 
+            pg_type t ON a.atttypid = t.oid      -- соединение по типу данных
+        LEFT JOIN 
+            pg_constraint con ON con.conrelid = c.oid  -- соединение с ограничениями на уровне таблицы
+            AND a.attnum = ANY(con.conkey)       -- связывание по столбцу
+        LEFT JOIN 
+            pg_index i ON i.indrelid = c.oid     -- соединение с индексами по идентификатору таблицы
+        LEFT JOIN 
+            pg_class ic ON ic.oid = i.indexrelid -- соединение для получения имени индекса
+            AND a.attnum = ANY(i.indkey)         -- связывание по столбцу
+        LEFT JOIN 
+            pg_description d ON d.objoid = a.attrelid AND d.objsubid = a.attnum -- получение комментария
+        WHERE 
+            a.attname = inp_column_name               -- условие на имя столбца
+            AND c.relkind = 'r'                   -- исключение индексов (выбираем только обычные таблицы)
+    )
+    SELECT 
+        ROW_NUMBER() OVER () AS no,                      -- нумерация строк
+        column_data.column_name,                 -- имя столбца
+        column_data.table_name,                  -- имя таблицы
+        -- Форматирование атрибутов (тип, ограничения, индексы, комментарии)
+        'Type  : ' || column_data.column_type || E'\n' ||
+        COALESCE(
+            'Constr: ' || column_data.constraint_type || E' ' || column_data.constraint_name || 
+            CASE WHEN column_data.constraint_type = 'FOREIGN KEY' THEN
+                ' REFERENCES ' || (SELECT relname FROM pg_class WHERE oid = column_data.confrelid) || 
+                '(' || (SELECT attname FROM pg_attribute WHERE attrelid = column_data.confrelid AND attnum = ANY(column_data.confkey)) || ')'
+            ELSE '' END || E'\n', '') ||
+        COALESCE('Commen: ' || column_data.column_comment || E'\n', '') ||
+        COALESCE('Index : ' || column_data.index_name || E'\n', '') AS attributes
+    FROM column_data;
+END;
+$$;
