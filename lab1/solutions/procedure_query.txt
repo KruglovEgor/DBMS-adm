@@ -73,10 +73,16 @@ BEGIN
         COALESCE('Commen: ' || STRING_AGG(DISTINCT column_comment, E', ') || E'\n', '') ||
         COALESCE('Index : ' || STRING_AGG(DISTINCT index_name, E', ') || E'\n', '') AS attributes
     FROM column_data
+	-- можно группировать только по column_name и table_name. Но выходит странно
     GROUP BY  table_id, num_in_table, column_name, table_name;
-
-
--- можно группировать только по column_name и table_name. Но выходит странно
+	
+	-- Выводим результаты из временной таблицы
+    RAISE NOTICE 'Results:';
+    FOR rec IN SELECT * FROM temp_column_info LOOP
+        RAISE NOTICE '%', rec;
+    END LOOP;
+END;
+$$;
 
 CALL get_column_info('user_id');
 SELECT * FROM temp_column_info;
